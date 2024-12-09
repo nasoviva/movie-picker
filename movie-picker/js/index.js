@@ -73,6 +73,7 @@ const moviesData = {
 let currentQuestion = 1;
 let selectedMovies = [];
 
+// Функция для перехода к следующему вопросу
 function nextQuestion(selectedMovieIndex) {
     selectedMovies.push(selectedMovieIndex);
 
@@ -88,18 +89,16 @@ function nextQuestion(selectedMovieIndex) {
     }
 }
 
+// Функция для обновления вопроса
 function updateQuestion(questionNumber, movies) {
-    // Update the question number
     const dotsTitle = document.querySelector(".dots-title");
     dotsTitle.textContent = `Question ${questionNumber} of 3:`;
 
-    // Update the active dot
     const dots = document.querySelectorAll(".dot");
     dots.forEach((dot, index) => {
         dot.classList.toggle("active", index === questionNumber - 1);
     });
 
-    // Update the question title
     const questionTitle = document.querySelector(".question-title");
     if (questionNumber === 1) {
         questionTitle.textContent = "Choose one of the three movies";
@@ -109,7 +108,6 @@ function updateQuestion(questionNumber, movies) {
         questionTitle.textContent = "Which one do you want to watch now?";
     }
 
-    // Update the movie images
     const moviesWrapper = document.querySelector(".movies-wrapper");
     moviesWrapper.innerHTML = "";
 
@@ -122,29 +120,54 @@ function updateQuestion(questionNumber, movies) {
     });
 }
 
+// Функция для отображения результата
 function showResult() {
-    // Hide the active question
     document.querySelector(".question").classList.remove("active");
-
-    // Show the result
     document.querySelector(".result-wrapper").classList.add("active");
 
-    // Get the last selected movie
     const lastSelectedIndex = selectedMovies[selectedMovies.length - 1] - 1;
     const secondQuestionMovies = moviesData[2][selectedMovies[0]];
     const selectedSecondMovie = secondQuestionMovies[selectedMovies[1] - 1];
     const finalMovies = moviesData[3][selectedSecondMovie.title];
     const finalMovie = finalMovies[lastSelectedIndex];
 
-    // Set the IMDb link in the button
     const imdbButton = document.getElementById("imdbButton");
     imdbButton.onclick = function () {
         window.location.href = finalMovie.imdb;
     };
 }
 
-// Initialize the first question
+// Функция для предварительной загрузки изображений
+function preloadImages(imageUrls) {
+    imageUrls.forEach((url) => {
+        const img = new Image();
+        img.src = url;
+    });
+}
+
+// Функция для извлечения всех изображений из moviesData
+function getAllMovieImages(data) {
+    const imageUrls = [];
+
+    function extractImages(obj) {
+        if (Array.isArray(obj)) {
+            obj.forEach((movie) => {
+                if (movie.img) imageUrls.push(movie.img);
+            });
+        } else if (typeof obj === "object") {
+            Object.values(obj).forEach((value) => extractImages(value));
+        }
+    }
+
+    extractImages(data);
+    return imageUrls;
+}
+
+// Инициализация первого вопроса
 document.addEventListener("DOMContentLoaded", () => {
+    const allImages = getAllMovieImages(moviesData);
+    preloadImages(allImages);
+
     const firstMovies = moviesData[1];
     updateQuestion(1, firstMovies);
 });
