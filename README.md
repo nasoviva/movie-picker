@@ -1,13 +1,6 @@
 ## [Movie-Picker](https://nasoviva.github.io/movie-picker/movie-picker/pages/)
 
 
-This project is a frontend test task for the position of Frontend Developer.
-
-## Task Requirements
-- **Technologies used:** HTML, CSS, JavaScript
-- **Goal:** Create a responsive website
-- **Time limit:** 48 hours
-
 ## Features
 - The website is fully responsive, ensuring that it adapts to various screen sizes (mobile, tablet, desktop).
 - The website follows modern frontend development practices and uses clean, maintainable code.
