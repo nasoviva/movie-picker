@@ -73,8 +73,8 @@ const moviesData = {
 let currentQuestion = 1;
 let selectedMovies = [];
 
-// Функция для перехода к следующему вопросу
 function nextQuestion(selectedMovieIndex) {
+    console.log(`[nextQuestion] User selected movie index: ${selectedMovieIndex} at question ${currentQuestion}`);
     selectedMovies.push(selectedMovieIndex);
 
     if (currentQuestion < 3) {
@@ -84,13 +84,22 @@ function nextQuestion(selectedMovieIndex) {
             : moviesData[3][moviesData[2][selectedMovies[0]][selectedMovies[1] - 1].title];
 
         updateQuestion(currentQuestion, nextMovies);
+        
+        setTimeout(() => {
+            const nextPossibleImages = getNextPossibleImages(selectedMovies, currentQuestion);
+            if (nextPossibleImages.length > 0) {
+                console.log(`[nextQuestion] Preloading ${nextPossibleImages.length} images for next question in background`);
+                preloadImages(nextPossibleImages, "low");
+            }
+        }, 100);
     } else {
         showResult();
     }
 }
 
-// Функция для обновления вопроса
 function updateQuestion(questionNumber, movies) {
+    console.log(`[updateQuestion] Updating to question ${questionNumber} with ${movies.length} movies`);
+    
     const dotsTitle = document.querySelector(".dots-title");
     dotsTitle.textContent = `Question ${questionNumber} of 3:`;
 
@@ -111,16 +120,39 @@ function updateQuestion(questionNumber, movies) {
     const moviesWrapper = document.querySelector(".movies-wrapper");
     moviesWrapper.innerHTML = "";
 
+    const fetchPriority = questionNumber === 1 ? "high" : "auto";
+    const loadingAttr = questionNumber === 1 ? "eager" : "lazy";
+
     movies.forEach((movie, index) => {
         const movieDiv = document.createElement("div");
         movieDiv.classList.add("movie");
-        movieDiv.innerHTML = `<img src="${movie.img}" alt="${movie.title}">`;
+        
+        const img = document.createElement("img");
+        img.src = movie.img;
+        img.alt = movie.title;
+        img.loading = loadingAttr;
+        img.fetchPriority = fetchPriority;
+        img.decoding = "async";
+        
+        img.onerror = function() {
+            console.error(`[Image Load Error] Failed to load image: ${movie.img}`);
+            this.style.backgroundColor = "#333";
+            this.style.display = "flex";
+            this.style.alignItems = "center";
+            this.style.justifyContent = "center";
+            this.alt = `${movie.title} - Image not available`;
+        };
+        
+        img.onload = function() {
+            console.log(`[Image Load] Successfully loaded: ${movie.img}`);
+        };
+        
+        movieDiv.appendChild(img);
         movieDiv.onclick = () => nextQuestion(index + 1);
         moviesWrapper.appendChild(movieDiv);
     });
 }
 
-// Функция для отображения результата
 function showResult() {
     document.querySelector(".question").classList.remove("active");
     document.querySelector(".result-wrapper").classList.add("active");
@@ -137,37 +169,67 @@ function showResult() {
     };
 }
 
-// Функция для предварительной загрузки изображений
-function preloadImages(imageUrls) {
+function preloadImages(imageUrls, priority = "low") {
+    console.log(`[preloadImages] Preloading ${imageUrls.length} images with priority: ${priority}`);
+    
     imageUrls.forEach((url) => {
         const img = new Image();
+        const link = document.createElement("link");
+        link.rel = "preload";
+        link.as = "image";
+        link.href = url;
+        link.fetchPriority = priority;
+        document.head.appendChild(link);
+        
         img.src = url;
+        img.onload = () => {
+            console.log(`[preloadImages] Preloaded: ${url}`);
+            link.remove();
+        };
+        img.onerror = () => {
+            console.error(`[preloadImages] Failed to preload: ${url}`);
+            link.remove();
+        };
     });
 }
 
-// Функция для извлечения всех изображений из moviesData
-function getAllMovieImages(data) {
-    const imageUrls = [];
-
-    function extractImages(obj) {
-        if (Array.isArray(obj)) {
-            obj.forEach((movie) => {
-                if (movie.img) imageUrls.push(movie.img);
+function getNextPossibleImages(selectedMovies, currentQuestion) {
+    const nextImages = [];
+    
+    if (currentQuestion === 1) {
+        Object.values(moviesData[2]).forEach(movies => {
+            movies.forEach(movie => {
+                if (movie.img) nextImages.push(movie.img);
             });
-        } else if (typeof obj === "object") {
-            Object.values(obj).forEach((value) => extractImages(value));
+        });
+    } else if (currentQuestion === 2 && selectedMovies.length > 0) {
+        const secondQuestionMovies = moviesData[2][selectedMovies[0]];
+        if (secondQuestionMovies) {
+            secondQuestionMovies.forEach(movie => {
+                const thirdQuestionMovies = moviesData[3][movie.title];
+                if (thirdQuestionMovies) {
+                    thirdQuestionMovies.forEach(m => {
+                        if (m.img) nextImages.push(m.img);
+                    });
+                }
+            });
         }
     }
-
-    extractImages(data);
-    return imageUrls;
+    
+    return nextImages;
 }
 
-// Инициализация первого вопроса
 document.addEventListener("DOMContentLoaded", () => {
-    const allImages = getAllMovieImages(moviesData);
-    preloadImages(allImages);
-
+    console.log("[DOMContentLoaded] Initializing movie picker");
+    
     const firstMovies = moviesData[1];
     updateQuestion(1, firstMovies);
+    
+    setTimeout(() => {
+        const nextPossibleImages = getNextPossibleImages([], 1);
+        if (nextPossibleImages.length > 0) {
+            console.log(`[DOMContentLoaded] Preloading ${nextPossibleImages.length} images for question 2 in background`);
+            preloadImages(nextPossibleImages, "low");
+        }
+    }, 500);
 });
